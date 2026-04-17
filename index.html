@@ -33,6 +33,16 @@
       gap: 1rem;
     }
     .pane h3 { margin: 0 0 0.4rem 0; font-size: 0.95rem; color: #888; }
+    .wat-pane { margin-top: 1rem; }
+    .wat-pane details { background: transparent; }
+    .wat-pane summary {
+      cursor: pointer;
+      margin-bottom: 0.4rem;
+      font-size: 0.95rem;
+      color: #888;
+      user-select: none;
+    }
+    .wat-pane pre { max-height: 30rem; font-size: 0.78rem; }
     footer { margin-top: 2rem; color: #888; font-size: 0.85rem; }
     code { background: rgba(128,128,128,0.15); padding: 0 0.25rem; border-radius: 3px; }
   </style>
@@ -66,6 +76,13 @@
     </div>
   </div>
 
+  <div class="wat-pane">
+    <details>
+      <summary>Generated WebAssembly (.wat)</summary>
+      <pre id="wat">Loading&hellip;</pre>
+    </details>
+  </div>
+
   <footer>
     <p>
       Compiled with <code>bcplwasm</code> (WAT backend in
@@ -79,13 +96,25 @@
 
     const sourceEl  = document.getElementById("source");
     const outputEl  = document.getElementById("output");
+    const watEl     = document.getElementById("wat");
     const selectEl  = document.getElementById("example");
     const runBtn    = document.getElementById("run");
 
-    async function loadSource(name) {
+    async function fetchText(url, fallback) {
+      const resp = await fetch(url);
+      return resp.ok ? await resp.text() : fallback;
+    }
+
+    async function loadExample(name) {
       outputEl.textContent = "";
-      const resp = await fetch(`examples/${name}.b`);
-      sourceEl.textContent = resp.ok ? await resp.text() : "(source unavailable)";
+      sourceEl.textContent = "Loading…";
+      watEl.textContent    = "Loading…";
+      const [src, wat] = await Promise.all([
+        fetchText(`examples/${name}.b`,   "(source unavailable)"),
+        fetchText(`examples/${name}.wat`, "(wat unavailable)"),
+      ]);
+      sourceEl.textContent = src;
+      watEl.textContent    = wat;
     }
 
     async function runExample() {
@@ -101,9 +130,9 @@
       }
     }
 
-    selectEl.addEventListener("change", () => loadSource(selectEl.value));
+    selectEl.addEventListener("change", () => loadExample(selectEl.value));
     runBtn.addEventListener("click", runExample);
-    loadSource(selectEl.value);
+    loadExample(selectEl.value);
   </script>
 </body>
 </html>
