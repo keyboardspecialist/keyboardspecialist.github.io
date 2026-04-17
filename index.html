@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>BCPL &rarr; WebAssembly</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.4;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .sub { color: #888; margin-top: 0; font-size: 0.9rem; }
+    .row { display: flex; gap: 0.5rem; align-items: center; margin: 1rem 0; }
+    select, button { font: inherit; padding: 0.4rem 0.7rem; }
+    button { cursor: pointer; }
+    pre {
+      background: #0e1116;
+      color: #e6edf3;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow: auto;
+      font-size: 0.85rem;
+      min-height: 4rem;
+      white-space: pre-wrap;
+    }
+    .panes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .pane h3 { margin: 0 0 0.4rem 0; font-size: 0.95rem; color: #888; }
+    footer { margin-top: 2rem; color: #888; font-size: 0.85rem; }
+    code { background: rgba(128,128,128,0.15); padding: 0 0.25rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>BCPL &rarr; WebAssembly playground</h1>
+  <p class="sub">
+    BCPL source compiled by the Cintcode system's new
+    <code>bcplwasm</code> backend, assembled to WebAssembly, executed
+    in-browser with a minimal host-provided stdlib.
+  </p>
+
+  <div class="row">
+    <label for="example">Example:</label>
+    <select id="example">
+      <option value="hello">hello</option>
+      <option value="fact">fact</option>
+      <option value="nested">nested</option>
+    </select>
+    <button id="run">Run</button>
+  </div>
+
+  <div class="panes">
+    <div class="pane">
+      <h3>Source (BCPL)</h3>
+      <pre id="source">Loading&hellip;</pre>
+    </div>
+    <div class="pane">
+      <h3>Output</h3>
+      <pre id="output"></pre>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      Compiled with <code>bcplwasm</code> (WAT backend in
+      <code>com/bcplcgwasm.b</code>), assembled with
+      <code>wat2wasm</code>. Source and runtime on GitHub.
+    </p>
+  </footer>
+
+  <script type="module">
+    import { BcplRuntime } from "./runtime.js";
+
+    const sourceEl  = document.getElementById("source");
+    const outputEl  = document.getElementById("output");
+    const selectEl  = document.getElementById("example");
+    const runBtn    = document.getElementById("run");
+
+    async function loadSource(name) {
+      outputEl.textContent = "";
+      const resp = await fetch(`examples/${name}.b`);
+      sourceEl.textContent = resp.ok ? await resp.text() : "(source unavailable)";
+    }
+
+    async function runExample() {
+      const name = selectEl.value;
+      outputEl.textContent = "";
+      const rt = new BcplRuntime((s) => { outputEl.textContent += s; });
+      try {
+        await rt.load(`examples/${name}.wasm`);
+        rt.run();
+      } catch (err) {
+        outputEl.textContent += `\n[runtime error] ${err.message ?? err}`;
+        console.error(err);
+      }
+    }
+
+    selectEl.addEventListener("change", () => loadSource(selectEl.value));
+    runBtn.addEventListener("click", runExample);
+    loadSource(selectEl.value);
+  </script>
+</body>
+</html>
